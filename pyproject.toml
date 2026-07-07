@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "policyguard"
+version = "0.1.0"
+description = "Policy-graph execution guard for LLM agents (AI safety research PoC)"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    "networkx>=3.2",
+    "pyyaml>=6.0",
+    "anthropic>=0.40",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+demo = ["streamlit>=1.35"]
+dev = ["pytest>=8.0", "ruff>=0.4", "black>=24.0"]
+
+[tool.setuptools.packages.find]
+include = ["guard*", "agent*", "policy*", "eval*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"guard/tests/*" = ["ANN"]
+"agent/tests/*" = ["ANN"]
+"eval/tests/*" = ["ANN"]
+"scripts/*" = ["ANN"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["guard/tests", "agent/tests", "eval/tests"]
+addopts = "-q"

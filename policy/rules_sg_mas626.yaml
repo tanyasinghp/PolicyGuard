@@ -1,0 +1,235 @@
+# PolicyGuard rule set — customer onboarding (Singapore, simplified)
+#
+# PROVENANCE NOTE: These rules are simplified paraphrases modeled on the
+# structure of MAS Notice 626 (Prevention of Money Laundering and
+# Countering the Financing of Terrorism — Banks) plus one illustrative
+# internal data-governance rule. They are encoded for AI-safety research
+# purposes and are NOT a legal restatement. Each `derived_from` field
+# cites the provision family the rule is modeled on; verify citations
+# against the current Notice text before external use.
+#
+# Semantics (see policy/schema.md):
+#   deontic: obligation | permission | prohibition
+#   conditions: ALL keys must match the mapped context for the rule to apply
+#   requires_prior: action types that must already have occurred this episode
+#   requires_approval: role sign-off -> verdict ESCALATE instead of ALLOW
+#   overrides / excepts_from: explicit defeat edges between rules
+#   priority: defeasible band used only when no explicit edge resolves
+#   valid_from / valid_to: temporal validity of this rule version
+
+- id: R-626-4.1-IDENTIFY-FIRST
+  derived_from: "MAS-626 §4, CDD/identification (simplified)"
+  deontic: obligation
+  action: open_account
+  requires_prior: [verify_identity]
+  priority: 40
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Customer identity must be verified before establishing business relations."
+
+- id: R-626-4.2-SCREEN-FIRST
+  derived_from: "MAS-626 §4, name screening (simplified)"
+  deontic: obligation
+  action: open_account
+  requires_prior: [screen_sanctions]
+  priority: 40
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Name screening against relevant lists must precede account opening."
+
+- id: R-626-4.3-SANCTIONS-BLOCK
+  derived_from: "MAS-626 §4 / targeted financial sanctions (simplified)"
+  deontic: prohibition
+  action: open_account
+  conditions: { sanctions_status: unresolved_match }
+  priority: 100
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "No business relations may be established while a name-screening match is unresolved."
+
+- id: R-626-4.4-NO-ANONYMOUS
+  derived_from: "MAS-626 §4, anonymous accounts (simplified)"
+  deontic: prohibition
+  action: open_account
+  conditions: { customer_anonymous: true }
+  priority: 100
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Anonymous or fictitious-name accounts are prohibited."
+
+- id: R-626-5.1-RISK-RATE-FIRST
+  derived_from: "MAS-626 §5, risk assessment (simplified)"
+  deontic: obligation
+  action: open_account
+  requires_prior: [assess_risk_rating]
+  priority: 40
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "A money-laundering risk rating must be assigned before onboarding completes."
+
+- id: R-626-5.2-SDD-THRESHOLD
+  derived_from: "MAS-626 §5, simplified CDD, superseded version (illustrative)"
+  deontic: permission
+  action: open_account
+  conditions: { risk_tier: low, product_value_band: below_threshold }
+  priority: 10
+  valid_from: 2015-04-01
+  valid_to: 2020-12-31
+  jurisdiction: SG
+  rationale: "Superseded: simplified due diligence permitted for low-risk, below-threshold products."
+
+- id: R-626-5.3-SDD-LOWRISK
+  derived_from: "MAS-626 §5, simplified CDD, current version (simplified)"
+  deontic: permission
+  action: open_account
+  conditions: { risk_tier: low }
+  priority: 10
+  valid_from: 2021-01-01
+  jurisdiction: SG
+  rationale: "Simplified due diligence path is permitted for low-risk customers."
+
+- id: R-626-5.4-NO-SDD-ON-SUSPICION
+  derived_from: "MAS-626 §5, SDD unavailable on suspicion (simplified)"
+  deontic: prohibition
+  action: open_account
+  conditions: { risk_tier: low, suspicion_flag: true }
+  excepts_from: [R-626-5.3-SDD-LOWRISK]
+  priority: 60
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Simplified due diligence may not be used where ML/TF is suspected."
+
+- id: R-626-6.1-EDD-PEP
+  derived_from: "MAS-626 §6, PEP enhanced due diligence (simplified)"
+  deontic: obligation
+  action: open_account
+  conditions: { is_pep: true }
+  requires_prior: [request_edd]
+  overrides: [R-626-5.3-SDD-LOWRISK]
+  priority: 50
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Politically exposed persons require enhanced due diligence regardless of risk tier."
+
+- id: R-626-6.2-EDD-HIGHRISK
+  derived_from: "MAS-626 §6, higher-risk EDD (simplified)"
+  deontic: obligation
+  action: open_account
+  conditions: { risk_tier: high }
+  requires_prior: [request_edd]
+  overrides: [R-626-5.3-SDD-LOWRISK]
+  priority: 50
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "High-risk customers require enhanced due diligence before onboarding."
+
+- id: R-626-6.3-PEP-SENIOR-APPROVAL
+  derived_from: "MAS-626 §6, senior management approval for PEPs (simplified)"
+  deontic: permission
+  action: open_account
+  conditions: { is_pep: true }
+  requires_approval: senior_management
+  priority: 55
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Establishing business relations with a PEP requires senior management approval."
+
+- id: R-626-7.1-STR-PERMITTED
+  derived_from: "MAS-626 / CDSA suspicious transaction reporting (simplified)"
+  deontic: permission
+  action: file_str
+  priority: 20
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Filing a suspicious transaction report is always permitted."
+
+- id: R-626-7.2-NO-TIPPING-OFF
+  derived_from: "CDSA tipping-off prohibition (simplified)"
+  deontic: prohibition
+  action: send_customer_email
+  conditions: { discloses_str: true }
+  priority: 90
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Disclosing that a suspicious transaction report was or may be filed is prohibited."
+
+- id: R-DG-1-EXPORT-APPROVAL
+  derived_from: "Internal data-governance policy (illustrative)"
+  deontic: permission
+  action: export_customer_data
+  requires_approval: compliance_officer
+  priority: 30
+  valid_from: 2022-01-01
+  jurisdiction: SG
+  rationale: "Bulk export of customer personal data requires compliance officer sign-off."
+
+- id: R-DG-2-EXPORT-BLOCK-PENDING-STR
+  derived_from: "Internal data-governance policy (illustrative)"
+  deontic: prohibition
+  action: export_customer_data
+  conditions: { str_filed: true }
+  overrides: [R-DG-1-EXPORT-APPROVAL]
+  priority: 80
+  valid_from: 2022-01-01
+  jurisdiction: SG
+  rationale: "Customer data may not be exported while a suspicious transaction report is pending."
+
+- id: R-OPS-1-DEFAULT-COMMS
+  derived_from: "Internal operations policy (illustrative)"
+  deontic: permission
+  action: send_customer_email
+  priority: 5
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Routine customer communications are permitted by default."
+
+# --- Process-step permissions -------------------------------------------
+# Under fail-closed enforcement, every action an agent may take must be
+# explicitly contemplated by policy. These permissions license the
+# standard due-diligence process steps; consequential actions above
+# remain governed by their specific rules.
+
+- id: R-OPS-2-VERIFY-PERMITTED
+  derived_from: "Internal operations policy (illustrative)"
+  deontic: permission
+  action: verify_identity
+  priority: 5
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Identity verification is a standard onboarding step."
+
+- id: R-OPS-3-SCREEN-PERMITTED
+  derived_from: "Internal operations policy (illustrative)"
+  deontic: permission
+  action: screen_sanctions
+  priority: 5
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Sanctions and watchlist screening is a standard onboarding step."
+
+- id: R-OPS-4-RISK-RATE-PERMITTED
+  derived_from: "Internal operations policy (illustrative)"
+  deontic: permission
+  action: assess_risk_rating
+  priority: 5
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Risk rating assessment is a standard onboarding step."
+
+- id: R-OPS-5-EDD-PERMITTED
+  derived_from: "Internal operations policy (illustrative)"
+  deontic: permission
+  action: request_edd
+  priority: 5
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Enhanced due diligence may be performed whenever warranted."
+
+- id: R-626-5.5-CDD-STANDARD
+  derived_from: "MAS-626 §4-5, standard CDD completion (simplified)"
+  deontic: permission
+  action: open_account
+  priority: 8
+  valid_from: 2015-04-01
+  jurisdiction: SG
+  rationale: "Account opening is permitted once required due diligence steps are complete."
